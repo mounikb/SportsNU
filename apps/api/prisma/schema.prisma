@@ -1,0 +1,38 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String       @id @default(uuid())
+  firebaseUid String       @unique
+  email       String       @unique
+  displayName String?
+  createdAt   DateTime     @default(now())
+  teamFollows TeamFollow[]
+}
+
+model Team {
+  id          String       @id
+  sport       String
+  name        String
+  shortName   String
+  logo        String?
+  competition String
+  externalId  String
+  followers   TeamFollow[]
+}
+
+model TeamFollow {
+  id        String   @id @default(uuid())
+  userId    String
+  teamId    String
+  user      User     @relation(fields: [userId], references: [id])
+  team      Team     @relation(fields: [teamId], references: [id])
+
+  @@unique([userId, teamId])
+}
