@@ -136,7 +136,7 @@ export function normalizeCricketMatch(raw: RawCricketMatch): CricketMatch {
     awayTeam,
     innings,
     currentInnings: innings.length > 0 ? innings.length - 1 : undefined,
-    summary: raw.status,
+    summary: mapCricketStatus(raw.status) === 'UPCOMING' ? undefined : raw.status,
     startTime: raw.dateTimeGMT ?? raw.date ?? new Date().toISOString(),
   };
 }

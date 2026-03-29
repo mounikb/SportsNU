@@ -68,16 +68,15 @@ export async function authMiddleware(
   try {
     const decoded = await admin.auth().verifyIdToken(token);
 
-    let user = await prisma.user.findUnique({ where: { firebaseUid: decoded.uid } });
-    if (!user) {
-      user = await prisma.user.create({
-        data: {
-          firebaseUid: decoded.uid,
-          email: decoded.email ?? '',
-          displayName: decoded.name ?? null,
-        },
-      });
-    }
+    const user = await prisma.user.upsert({
+      where: { firebaseUid: decoded.uid },
+      update: { displayName: decoded.name ?? null },
+      create: {
+        firebaseUid: decoded.uid,
+        email: decoded.email ?? '',
+        displayName: decoded.name ?? null,
+      },
+    });
 
     req.user = { id: user.id, email: user.email, firebaseUid: user.firebaseUid };
     next();
