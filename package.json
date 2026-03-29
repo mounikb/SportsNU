@@ -1,0 +1,14 @@
+{
+  "name": "scorecard",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"pnpm --filter @scorecard/api dev\" \"pnpm --filter @scorecard/web dev\"",
+    "build": "pnpm --filter @scorecard/web build && pnpm --filter @scorecard/api build",
+    "db:migrate": "pnpm --filter @scorecard/api db:migrate",
+    "db:seed": "pnpm --filter @scorecard/api db:seed",
+    "lint": "pnpm -r lint"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
