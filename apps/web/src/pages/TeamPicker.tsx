@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Team } from '@scorecard/types';
 import api from '../lib/api';
 import { useTeamStore } from '../store/teamStore';
+// useTeamStore imported for direct state access below
 
 export function TeamPicker(): JSX.Element {
   const navigate = useNavigate();
@@ -13,8 +14,14 @@ export function TeamPicker(): JSX.Element {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.get<{ teams: Team[] }>('/teams')
-      .then(({ data }) => setAllTeams(data.teams))
+    Promise.all([
+      api.get<{ teams: Team[] }>('/teams'),
+      api.get<{ teams: Team[] }>('/teams/mine'),
+    ])
+      .then(([allRes, mineRes]) => {
+        setAllTeams(allRes.data.teams);
+        useTeamStore.getState().setFollowedTeams(mineRes.data.teams);
+      })
       .catch(console.error)
       .finally(() => setLoading(false));
   }, []);

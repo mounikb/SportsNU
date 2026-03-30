@@ -1,40 +1,41 @@
 import { useEffect } from 'react';
 import { useAuthStore } from '../store/authStore';
-import api from '../lib/api';
 
-const DEV_TOKEN = 'dev-token';
-const DEV_USER = { id: 'dev-user-id', email: 'dev@scorecard.local', displayName: 'Dev User' };
+function decodeJWT(
+  token: string
+): { sub: string; email: string; displayName?: string; exp: number } | null {
+  try {
+    return JSON.parse(atob(token.split('.')[1])) as {
+      sub: string;
+      email: string;
+      displayName?: string;
+      exp: number;
+    };
+  } catch {
+    return null;
+  }
+}
 
-export function useAuth(): { isAuthenticated: boolean; loading: boolean } {
+export function useAuth(): { isAuthenticated: boolean } {
   const { isAuthenticated, login } = useAuthStore();
 
   useEffect(() => {
-    const isDev = import.meta.env.VITE_DEV_AUTH === 'true';
+    if (isAuthenticated) return;
 
-    if (isDev && !isAuthenticated) {
-      api.post('/auth/verify', {}).then(() => {
-        login(DEV_USER, DEV_TOKEN);
-      }).catch(console.error);
+    const token = localStorage.getItem('auth_token');
+    if (!token) return;
+
+    const payload = decodeJWT(token);
+    if (!payload || payload.exp * 1000 < Date.now()) {
+      localStorage.removeItem('auth_token');
       return;
     }
 
-    if (!isDev) {
-      import('firebase/auth').then(({ getAuth, onAuthStateChanged }) => {
-        const auth = getAuth();
-        const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-          if (firebaseUser) {
-            const token = await firebaseUser.getIdToken();
-            const { data } = await api.post('/auth/verify', { token });
-            login(
-              { id: data.user.id, email: data.user.email, displayName: data.user.displayName },
-              token
-            );
-          }
-        });
-        return unsubscribe;
-      });
-    }
+    login(
+      { id: payload.sub, email: payload.email, displayName: payload.displayName },
+      token
+    );
   }, [isAuthenticated, login]);
 
-  return { isAuthenticated, loading: false };
+  return { isAuthenticated };
 }

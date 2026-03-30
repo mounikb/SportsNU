@@ -8,12 +8,12 @@ datasource db {
 }
 
 model User {
-  id          String       @id @default(uuid())
-  firebaseUid String       @unique
-  email       String       @unique
-  displayName String?
-  createdAt   DateTime     @default(now())
-  teamFollows TeamFollow[]
+  id           String       @id @default(uuid())
+  email        String       @unique
+  passwordHash String
+  displayName  String?
+  createdAt    DateTime     @default(now())
+  teamFollows  TeamFollow[]
 }
 
 model Team {

@@ -1,47 +1,102 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import api from '../lib/api';
 
-const DEV_USER = { id: 'dev-user-id', email: 'dev@scorecard.local', displayName: 'Dev User' };
-
 export function Landing(): JSX.Element {
   const navigate = useNavigate();
   const login = useAuthStore((s) => s.login);
-  const isDev = import.meta.env.VITE_DEV_AUTH === 'true';
+  const [mode, setMode] = useState<'login' | 'register'>('login');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [displayName, setDisplayName] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  async function handleDevLogin(): Promise<void> {
-    await api.post('/auth/verify', {});
-    login(DEV_USER, 'dev-token');
-    navigate('/pick-teams');
+  async function handleSubmit(e: React.FormEvent): Promise<void> {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+    try {
+      const endpoint = mode === 'login' ? '/auth/login' : '/auth/register';
+      const payload =
+        mode === 'login' ? { email, password } : { email, password, displayName };
+      const { data } = await api.post<{
+        token: string;
+        user: { id: string; email: string; displayName?: string };
+      }>(endpoint, payload);
+      localStorage.setItem('auth_token', data.token);
+      login(data.user, data.token);
+      navigate('/pick-teams');
+    } catch (err: unknown) {
+      const apiError = (err as { response?: { data?: { error?: string } } })?.response?.data
+        ?.error;
+      setError(apiError ?? 'Something went wrong');
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
     <div className="min-h-screen bg-bg flex flex-col items-center justify-center px-4">
-      <div className="w-full max-w-sm text-center">
-        <h1 className="text-4xl font-bold text-text mb-2">
-          Score<span className="text-accent">card</span>
-        </h1>
-        <p className="text-text-muted text-sm mb-10">
-          Your teams. Live scores. Nothing else.
-        </p>
+      <div className="w-full max-w-sm">
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold text-text mb-2">
+            Score<span className="text-accent">card</span>
+          </h1>
+          <p className="text-text-muted text-sm">Your teams. Live scores. Nothing else.</p>
+        </div>
 
-        {isDev ? (
+        <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4">
+          {mode === 'register' && (
+            <input
+              type="text"
+              placeholder="Display name (optional)"
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
+              className="w-full bg-card border border-card-border text-text px-4 py-3 rounded-card focus:outline-none focus:border-accent transition-colors"
+            />
+          )}
+          <input
+            type="email"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            className="w-full bg-card border border-card-border text-text px-4 py-3 rounded-card focus:outline-none focus:border-accent transition-colors"
+          />
+          <input
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            className="w-full bg-card border border-card-border text-text px-4 py-3 rounded-card focus:outline-none focus:border-accent transition-colors"
+          />
+
+          {error && <p className="text-red-400 text-sm">{error}</p>}
+
           <button
-            onClick={() => void handleDevLogin()}
-            className="w-full bg-accent text-bg font-semibold py-3 rounded-card hover:opacity-90 transition-opacity"
+            type="submit"
+            disabled={loading}
+            className="w-full bg-accent text-bg font-semibold py-3 rounded-card hover:opacity-90 transition-opacity disabled:opacity-50"
           >
-            Continue as Dev User
+            {loading ? 'Please wait...' : mode === 'login' ? 'Sign In' : 'Create Account'}
           </button>
-        ) : (
-          <div className="space-y-3">
-            <button className="w-full bg-accent text-bg font-semibold py-3 rounded-card hover:opacity-90 transition-opacity">
-              Continue with Google
-            </button>
-            <button className="w-full bg-card border border-card-border text-text font-medium py-3 rounded-card hover:border-accent/50 transition-colors">
-              Sign in with Email
-            </button>
-          </div>
-        )}
+        </form>
+
+        <p className="text-center text-text-muted text-sm mt-6">
+          {mode === 'login' ? "Don't have an account? " : 'Already have an account? '}
+          <button
+            onClick={() => {
+              setMode(mode === 'login' ? 'register' : 'login');
+              setError('');
+            }}
+            className="text-accent hover:underline"
+          >
+            {mode === 'login' ? 'Create one' : 'Sign in'}
+          </button>
+        </p>
       </div>
     </div>
   );

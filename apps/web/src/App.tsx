@@ -5,6 +5,7 @@ import { Dashboard } from './pages/Dashboard';
 import { Settings } from './pages/Settings';
 import { useAuthStore } from './store/authStore';
 import { useTeamStore } from './store/teamStore';
+import { useAuth } from './hooks/useAuth';
 
 function ProtectedRoute({ children }: { children: JSX.Element }): JSX.Element {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -19,6 +20,7 @@ function DashboardRoute(): JSX.Element {
 }
 
 export function App(): JSX.Element {
+  useAuth();
   return (
     <BrowserRouter>
       <Routes>
